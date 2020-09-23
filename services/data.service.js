@@ -1,3 +1,5 @@
+const db = require('./db');
+
 let accountDetails={
     1001:{name:"user1", acno:1001, pin:1234, password:'userone', balance:3000, transactions:[]},
     1002:{name:"user2", acno:1002, pin:2345, password:'usertwo', balance:2500, transactions:[]},
@@ -8,6 +10,32 @@ let accountDetails={
 let currentUser;
 
 const register = (name,acno,pin,password)=>{
+    return db.User.findOne({
+      acno
+    })
+    .then(user=>{
+      if(user){
+        return {
+          status:false,
+          statusCode:422,
+          message:'Account already exists. Please login'
+        }
+      }
+      const newUser = new db.User({
+        name,
+        acno,
+        pin,
+        password,
+        balance:0,
+        transactions:[]
+      });
+      newUser.save();
+      return {
+        status:true,
+        statusCode:200,
+        message:'Account created successfully. Please login'
+      };
+    })
     if (acno in accountDetails){
         return {
           status:false,
@@ -31,19 +59,19 @@ const register = (name,acno,pin,password)=>{
     }
 }
 
-const login = (acno1, password)=>{
+const login = (req,acno1, password)=>{
     var acno=parseInt(acno1);
     var data=accountDetails;
     if (acno in data){
       var pwd = data[acno].password
       if (pwd==password){
-        currentUser = data[acno];
+        req.session.currentUser = data[acno];
         // this.saveDetails();
         return {
             status:true,
             statusCode:200,
             message:'Logged in'
-          }
+        }
       }
     }
     return {
@@ -61,7 +89,8 @@ const deposit = (dpacno,dppin,dpamt)=>{
             data[dpacno].balance+= parseInt(dpamt);
             data[dpacno].transactions.push({
               amount:dpamt,
-              type:'Credit'
+              type:'Credit',
+              id: Math.floor(Math.random()*100000)
             })
             //this.saveDetails();
             return {
@@ -97,7 +126,8 @@ const withdraw = (wacno,wpin,wamt)=>{
             data[wacno].balance-= parseInt(wamt)
             data[wacno].transactions.push({
               amount:wamt,
-              type:'Debit'
+              type:'Debit',
+              id: Math.floor(Math.random()*100000)
             })
             return {
               status:true,
@@ -116,8 +146,24 @@ const withdraw = (wacno,wpin,wamt)=>{
     }
 }
 
-const getTransactions = ()=>{
-    return accountDetails[currentUser.acno].transactions;
+const getTransactions = (req)=>{
+  return accountDetails[req.session.currentUser.acno].transactions;
+}
+
+const deleteTransaction = (req, id)=>{
+  let transactions = accountDetails[req.session.currentUser.acno].transactions;
+  transactions = transactions.filter(t=>{
+      if(t.id==id){
+          return false;
+      }
+      return true;
+  })
+  accountDetails[req.session.currentUser.acno].transactions = transactions;
+  return {
+    status:true,
+    statusCode:200,
+    message:'Transaction deleted successfully'
+  }
 }
 
 // getDetails(){
@@ -134,5 +180,6 @@ module.exports={
     login,
     deposit,
     withdraw,
-    getTransactions
+    getTransactions,
+    deleteTransaction
 }

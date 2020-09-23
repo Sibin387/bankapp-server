@@ -42,14 +42,16 @@ app.post('/register', (req,res)=>{
     dataService.register(req.body.name,req.body.acno,req.body.pin,req.body.password)
     .then(result=>{
         res.status(result.statusCode).json(result);
-    })
+    });
     //res.status(200).send("success");
     //res.status(result.statusCode).json(result);
 })
 
 app.post('/login', (req,res)=>{
-    const result = dataService.login(req, req.body.accno,req.body.password)
-    res.status(result.statusCode).json(result);
+    dataService.login(req, req.body.accno,req.body.password)
+    .then(result=>{
+        res.status(result.statusCode).json(result);
+    })
 })
 
 app.post('/deposit', authMiddleware, (req,res)=>{

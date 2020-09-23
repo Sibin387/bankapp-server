@@ -11,7 +11,7 @@ let currentUser;
 
 const register = (name,acno,pin,password)=>{
     return db.User.findOne({
-      acno
+      acno:acno
     })
     .then(user=>{
       if(user){
@@ -35,43 +35,22 @@ const register = (name,acno,pin,password)=>{
         statusCode:200,
         message:'Account created successfully. Please login'
       };
-    })
-    if (acno in accountDetails){
-        return {
-          status:false,
-          statusCode:422,
-          message:'Account already exists. Please login'
-        }
-    }
-    accountDetails[acno]={
-        name,
-        acno,
-        pin,
-        password,
-        balance:0,
-        transactions:[]
-    }
-    //this.saveDetails();
-    return {
-        status:true,
-        statusCode:200,
-        message:'Account created successfully. Please login'
-    }
+    });
 }
 
 const login = (req,acno1, password)=>{
-    var acno=parseInt(acno1);
-    var data=accountDetails;
-    if (acno in data){
-      var pwd = data[acno].password
-      if (pwd==password){
-        req.session.currentUser = data[acno];
-        // this.saveDetails();
-        return {
-            status:true,
-            statusCode:200,
-            message:'Logged in'
-        }
+  var acno=parseInt(acno1);
+  return db.User.findOne({
+    acno:acno,
+    password
+  })
+  .then(user=>{
+    if(user){
+      req.session.currentUser=user;
+      return {
+          status:true,
+          statusCode:200,
+          message:'Logged in'
       }
     }
     return {
@@ -79,6 +58,7 @@ const login = (req,acno1, password)=>{
         statusCode:422,
         message:'Invalid Credentials'
     }
+  })
 }
 
 const deposit = (dpacno,dppin,dpamt)=>{

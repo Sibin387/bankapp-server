@@ -46,11 +46,12 @@ const login = (req,acno1, password)=>{
   })
   .then(user=>{
     if(user){
-      req.session.currentUser=user;
+      req.session.currentUser=acno;
       return {
           status:true,
           statusCode:200,
-          message:'Logged in'
+          message:'Logged in',
+          name:user.name
       }
     }
     return {
@@ -61,89 +62,115 @@ const login = (req,acno1, password)=>{
   })
 }
 
-const deposit = (dpacno,dppin,dpamt)=>{
-    var data=accountDetails;
-    if (dpacno in data){
-        var mpin = data[dpacno].pin
-        if (dppin==mpin){
-            data[dpacno].balance+= parseInt(dpamt);
-            data[dpacno].transactions.push({
-              amount:dpamt,
-              type:'Credit',
-              id: Math.floor(Math.random()*100000)
-            })
-            //this.saveDetails();
-            return {
-              status:true,
-              statusCode:200,
-              message:'account has been credited', 
-              balance:data[dpacno].balance
-            }
-        }
+const deposit = (req,dpacno,dppin,dpamt)=>{
+  return db.User.findOne({
+    acno:dpacno,
+    pin: dppin
+  })
+  .then(user=>{
+    if(req.session.currentUser!=dpacno){
+      return {
+          status:false,
+          statusCode:422,
+          message:'You are not allowed to make this transaction'
+      }
     }
-    else{
+    if(!user){
         return {
             status:false,
             statusCode:422,
             message:'Incorrect Account Details'
         }
     }
+    user.balance+= parseInt(dpamt);
+    user.transactions.push({
+      amount:dpamt,
+      typeOfTransaction:'Credit'
+    });
+    user.save();
+    return {
+      status:true,
+      statusCode:200,
+      message:'account has been credited', 
+      balance:user.balance
+    }
+  });
 }
 
-const withdraw = (wacno,wpin,wamt)=>{
-    var data=accountDetails;
-    if (wacno in data){
-        var mpin = data[wacno].pin
-        if(data[wacno].balance<parseInt(wamt)){
-          return {
+const withdraw = (req,wacno,wpin,wamt)=>{
+  return db.User.findOne({
+    acno:wacno,
+    pin: wpin
+  })
+  .then(user=>{
+    if(!user){
+        return {
             status:false,
             statusCode:422,
-            message:'Insufficient balance', 
-            balance:data[wacno].balance
-          }
-        }
-        else if (wpin==mpin){
-            data[wacno].balance-= parseInt(wamt)
-            data[wacno].transactions.push({
-              amount:wamt,
-              type:'Debit',
-              id: Math.floor(Math.random()*100000)
-            })
-            return {
-              status:true,
-              statusCode:200,
-              message:'account has been debited', 
-              balance:data[wacno].balance
-            }
+            message:'Incorrect Account Details'
         }
     }
-    else{
+    if(req.session.currentUser!=wacno){
+      return {
+          status:false,
+          statusCode:422,
+          message:'You are not allowed to make this transaction'
+      }
+    }
+    if(user.balance<parseInt(wamt)){
       return {
         status:false,
         statusCode:422,
-        message:'Incorrect Account Details'
+        message:'Insufficient balance', 
+        balance:user.balance
       }
     }
+    user.balance-= parseInt(wamt)
+    user.transactions.push({
+      amount:wamt,
+      typeOfTransaction:'Debit'
+    })
+    user.save();
+    return {
+      status:true,
+      statusCode:200,
+      message:'account has been debited', 
+      balance:user.balance
+    }
+  })
 }
 
 const getTransactions = (req)=>{
-  return accountDetails[req.session.currentUser.acno].transactions;
+  return db.User.findOne({
+    acno:req.session.currentUser
+  })
+  .then(user=>{
+    return {
+      status:true,
+      statusCode:200,
+      transactions:user.transactions
+    }
+  })
 }
 
 const deleteTransaction = (req, id)=>{
-  let transactions = accountDetails[req.session.currentUser.acno].transactions;
-  transactions = transactions.filter(t=>{
-      if(t.id==id){
+  return db.User.findOne({
+    acno:req.session.currentUser
+  })
+  .then(user=>{
+    user.transactions = user.transactions.filter(t=>{
+      if(t._id==id){
           return false;
       }
       return true;
+    })
+    user.save();
+    return {
+      status:true,
+      statusCode:200,
+      message:'Transaction deleted successfully'
+    }
   })
-  accountDetails[req.session.currentUser.acno].transactions = transactions;
-  return {
-    status:true,
-    statusCode:200,
-    message:'Transaction deleted successfully'
-  }
 }
 
 // getDetails(){

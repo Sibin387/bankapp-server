@@ -1,8 +1,14 @@
 const express = require('express');
 const dataService = require('./services/data.service');
 const session = require('express-session')
+const cors = require('cors');
 
 const app = express();
+
+app.use(cors({
+    origin:'http://localhost:4200',
+    credentials:true
+}))
 
 app.use(session({
     secret:'randomsecurestring',
@@ -55,23 +61,31 @@ app.post('/login', (req,res)=>{
 })
 
 app.post('/deposit', authMiddleware, (req,res)=>{
-    const result = dataService.deposit(req.body.dpacno,req.body.dppin,req.body.dpamt)
-    res.status(result.statusCode).json(result);
+    dataService.deposit(req, req.body.dpacno,req.body.dppin,req.body.dpamt)
+    .then(result=>{
+        res.status(result.statusCode).json(result);
+    });
 })
 
 app.post('/withdraw', authMiddleware, (req,res)=>{
-    const result = dataService.withdraw(req.body.dpacno,req.body.dppin,req.body.dpamt)
-    res.status(result.statusCode).json(result);
+    dataService.withdraw(req, req.body.dpacno,req.body.dppin,req.body.dpamt)
+    .then(result=>{
+        res.status(result.statusCode).json(result);
+    });
 })
 
 app.get('/transactions', authMiddleware, (req,res)=>{
-    const result = dataService.getTransactions(req)
-    res.status(200).json(result);
+    dataService.getTransactions(req)
+    .then(result=>{
+        res.status(result.statusCode).json(result);
+    });
 })
 
 app.delete('/transactions/:id', authMiddleware,(req,res)=>{
-    const result = dataService.deleteTransaction(req,req.params.id)
-    res.status(200).json(result);
+    dataService.deleteTransaction(req,req.params.id)
+    .then(result=>{
+        res.status(result.statusCode).json(result);
+    });
 })
 
 // app.get('/transactions', authMiddleware, (req,res)=>{
